@@ -383,15 +383,15 @@ const DISK = 245, START_FREE = 5.6;
 const ITEMS = [
   {id:'macos',     name:'macOS & system',            size:38,  group:'lock',  meta:'Your Mac needs these to start'},
   {id:'apps',      name:'Apps',                      size:34,  group:'lock',  meta:'Everything you have installed'},
-  {id:'rec',       name:'Hidden screen recordings',  size:18,  group:'check', meta:'2023 – 2024'},
+  {id:'rec',       name:'Hidden screen recordings',  size:18,  group:'check', pick:true, meta:'2023 – 2024'},
   {id:'photos',    name:'Photos & videos',           size:41,  group:'lock',  meta:'Your exports and camera roll'},
   {id:'update',    name:'Leftover update files',     size:30,  group:'safe',  meta:'Old macOS download'},
-  {id:'whatsapp',  name:'WhatsApp media',            size:13,  group:'check', meta:'Photos and videos from chats'},
+  {id:'whatsapp',  name:'WhatsApp media',            size:13,  group:'check', pick:true, meta:'Photos and videos from chats'},
   {id:'capcut',    name:'Video projects',            size:18,  group:'lock',  meta:'Work in progress'},
   {id:'caches',    name:'App caches & logs',         size:9,   group:'safe',  meta:'Rebuild themselves'},
   {id:'drafts',    name:'Old video drafts',          size:7.8, group:'check', meta:'Not opened in a while'},
   {id:'docs',      name:'Documents',                 size:7,   group:'lock',  meta:'Your files'},
-  {id:'descript',  name:'Data from a deleted app',   size:6,   group:'check', meta:'App no longer installed'},
+  {id:'descript',  name:'Data from a deleted app',   size:6,   group:'check', pick:true, meta:'App no longer installed'},
   {id:'vm',        name:'Claude app virtual computer', size:8, group:'safe',  meta:'Re-downloads if needed'},
   {id:'zips',      name:'Downloaded zip files',      size:2.7, group:'check', meta:'Feb 2025 · Desktop'},
   {id:'browser',   name:'Browser profiles',          size:4.8, group:'lock',  meta:'Logins and history'},
@@ -408,7 +408,7 @@ const $ = s => document.querySelector(s);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const byId = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 const state = { stage:'idle', tab:'safe', dec:{}, gone:new Set() };
-ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = 'keep'; });
+ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = i.pick ? 'delete' : 'keep'; });
 
 const fmt = v => v < 0.05 ? '0' : v < 10 ? v.toFixed(1) : String(Math.round(v));
 const sizeLabel = n => (n < 10 ? n.toFixed(1) : String(n)) + ' GB';
@@ -538,7 +538,7 @@ function finishCheck(btn) {
 
 function reset() {
   state.stage = 'idle'; state.tab = 'safe'; state.gone.clear();
-  ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = 'keep'; });
+  ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = i.pick ? 'delete' : 'keep'; });
   stack.querySelectorAll('.block').forEach(b => { b.style.transitionDelay = '0ms'; b.className = 'block'; });
   tweenTo(START_FREE);
   render();
@@ -583,7 +583,7 @@ function render() {
   document.querySelectorAll('[data-count]').forEach(c => { c.textContent = inGroup(c.dataset.count).length; });
   $('#tabHint').textContent = HINTS[state.tab];
 
-  inGroup('check').forEach(i => blockEl(i.id).classList.toggle('marked', state.dec[i.id] === 'delete' && !state.gone.has(i.id)));
+  inGroup('check').forEach(i => blockEl(i.id).classList.toggle('marked', state.stage === 'safeCleared' && state.dec[i.id] === 'delete' && !state.gone.has(i.id)));
   renderList();
 }
 
