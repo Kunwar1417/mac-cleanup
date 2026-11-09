@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Cleanup</title>
+<meta name="description" content="One rules file that turns Claude Code into a careful Mac cleanup assistant.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='2' width='26' height='28' rx='8' fill='%23F3F3F1'/%3E%3Crect x='7' y='20' width='18' height='6' rx='2' fill='%230E0E0E'/%3E%3Crect x='7' y='14' width='18' height='5' rx='2' fill='%23FFB516'/%3E%3Crect x='7' y='9' width='18' height='4' rx='2' fill='%231FBF75'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E0E0E; --ink-2:#5A5A55; --ink-3:#8E8E88;
+  --paper:#FFFFFF; --mist:#F3F3F1; --mist-2:#EAEAE6; --line:#E8E8E4;
+  --safe:#1FBF75; --check:#FFB516; --lock:#1B1B1D; --unsorted:#DCDCD7;
+  --focus:#3D5AFE;
+  --display:'Bricolage Grotesque', system-ui, sans-serif;
+  --body:'Geist', system-ui, -apple-system, sans-serif;
+  --mono:'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ease:cubic-bezier(.7,0,.25,1);
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+.mono{font-family:var(--mono)}
+[hidden]{display:none !important}
+
+/* ---------- Nav ---------- */
+.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.nav-in{display:flex;align-items:center;gap:16px;height:88px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.025em;text-decoration:none;margin-right:12px;white-space:nowrap}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-link{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:999px;color:var(--ink-2);font:500 16px/1 var(--body);text-decoration:none;background:none;border:0;cursor:pointer;transition:background .2s,color .2s}
+.nav-link:hover,.nav-link[aria-expanded="true"]{background:var(--mist);color:var(--ink)}
+.nav-link svg{transition:transform .2s}
+.nav-link[aria-expanded="true"] svg{transform:rotate(180deg)}
+.dd{position:relative}
+.menu{position:absolute;top:calc(100% + 10px);left:0;min-width:240px;background:#fff;border-radius:20px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.04);opacity:0;transform:translateY(-6px) scale(.98);transform-origin:top left;pointer-events:none;transition:opacity .18s,transform .18s}
+.menu.open{opacity:1;transform:none;pointer-events:auto}
+.menu a{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:12px;font-weight:600;text-decoration:none}
+.menu a:hover{background:var(--mist)}
+.prompt{flex:1;max-width:540px;margin:0 auto;height:56px;border-radius:999px;background:var(--mist);display:flex;align-items:center;gap:12px;padding:0 22px;color:var(--ink-2);border:0;font:500 16px/1 var(--body);cursor:pointer;text-align:left;transition:background .2s}
+.prompt:hover{background:var(--mist-2)}
+.prompt .caret{display:inline-block;width:2px;height:20px;background:var(--ink);margin-left:2px;vertical-align:middle;animation:blink 1s steps(1) infinite}
+.prompt .hint{margin-left:auto;font:500 12px/1 var(--mono);color:var(--ink-3)}
+@keyframes blink{50%{opacity:0}}
+.nav-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.icon-btn{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.03);text-decoration:none;transition:transform .2s}
+.icon-btn:hover{transform:rotate(-8deg) scale(1.05)}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 26px;border-radius:999px;font:600 16px/1 var(--body);border:0;cursor:pointer;text-decoration:none;white-space:nowrap;transition:transform .15s,background .2s,box-shadow .2s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:#2C2C2C}
+.btn-primary:disabled{background:#3A3A3A;cursor:progress}
+.btn-ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-ghost:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn-big{height:66px;font-size:18px;padding:0 40px;min-width:min(100%,380px)}
+
+/* ---------- Hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:clamp(40px,8vw,128px);align-items:center;padding:40px 0 104px}
+.jar-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;padding:0 6px}
+.jar-name{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.02em}
+.jar-free{font-family:var(--mono);font-size:14px;color:var(--ink-2)}
+.jar-free b{color:var(--ink);font-weight:500}
+.jar{position:relative;height:clamp(440px,66vh,660px);background:var(--mist);border-radius:32px;padding:10px;overflow:hidden}
+.stack{height:100%;display:flex;flex-direction:column-reverse;border-radius:22px;overflow:hidden}
+.free{flex:1 1 0;min-height:0;background:repeating-linear-gradient(135deg,#fff 0 7px,#F8F8F6 7px 14px)}
+.block{position:relative;flex:0 0 auto;height:calc(var(--gb) / 245 * 100%);background:var(--unsorted);border-top:2px solid var(--mist);container-type:size;overflow:hidden;transition:height .8s var(--ease),border-top-width .8s var(--ease),background-color .35s ease,opacity .6s ease,box-shadow .2s}
+.block.sorted[data-group="safe"]{background:var(--safe)}
+.block.sorted[data-group="check"]{background:var(--check)}
+.block.sorted[data-group="lock"]{background:repeating-linear-gradient(135deg,#1B1B1D 0 7px,#252528 7px 14px);color:#fff}
+.block-label{display:none;position:absolute;inset:0;z-index:1;padding:0 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;white-space:nowrap}
+.block-label .mono{font-weight:500;opacity:.75}
+@container (min-height: 22px){ .block.sorted .block-label{display:flex} }
+.block.marked::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.6) 0 6px,transparent 6px 12px);background-size:17px 17px;animation:march .9s linear infinite}
+@keyframes march{to{background-position:17px 0}}
+.block.hl{box-shadow:inset 0 0 0 3px var(--focus)}
+.block.gone{height:0;border-top-width:0;opacity:.25}
+.sweep{position:absolute;left:10px;right:10px;top:-130px;height:120px;pointer-events:none;opacity:0;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.75));border-bottom:2px solid var(--ink);z-index:2}
+.jar.scanning .sweep{opacity:1;animation:sweep var(--scan,2.6s) cubic-bezier(.45,0,.55,1) forwards}
+@keyframes sweep{from{top:-130px}to{top:calc(100% - 110px)}}
+.legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:16px;padding:0 6px;font-size:14px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;flex:none}
+.dot.safe{background:var(--safe)} .dot.check{background:var(--check)} .dot.lock{background:var(--lock)}
+
+.eyebrow{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:999px;background:var(--mist);font-size:13px;font-weight:600;color:var(--ink-2)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--safe);box-shadow:0 0 0 4px rgba(31,191,117,.18)}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(64px,9vw,132px);line-height:.92;letter-spacing:-.035em;margin:22px 0 34px}
+.label{font-weight:500;color:var(--ink-2);font-size:17px;margin-bottom:10px}
+.meta{display:flex;gap:40px;flex-wrap:wrap;margin-bottom:34px}
+.chip{display:inline-flex;align-items:center;gap:10px;height:54px;padding:0 20px 0 8px;border-radius:999px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.03);font-weight:600;font-size:17px}
+.chip-ic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--mist)}
+.stats{display:flex;gap:64px;flex-wrap:wrap;margin-bottom:22px}
+.big{font-family:var(--display);font-weight:700;font-size:clamp(44px,4.6vw,60px);letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:.62em;letter-spacing:-.02em;margin-left:4px}
+.status{min-height:52px;max-width:48ch;color:var(--ink-2);margin:0 0 22px}
+.status code{font-family:var(--mono);font-size:13.5px;background:var(--mist);padding:3px 8px;border-radius:7px;color:var(--ink)}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+
+/* Sorter */
+.sorter{margin-top:38px}
+.tabs{display:inline-flex;max-width:100%;overflow-x:auto;background:var(--mist);border-radius:999px;padding:5px;gap:2px;scrollbar-width:none}
+.tab{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border:0;border-radius:999px;background:none;font:600 14px/1 var(--body);color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,box-shadow .2s}
+.tab[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.tab .count{font:500 12px/1 var(--mono);color:var(--ink-3)}
+.tab-hint{color:var(--ink-2);font-size:15px;margin:16px 0 6px;max-width:52ch}
+.list{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:14px 6px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;font:inherit;color:inherit;text-align:left;border-radius:0;transition:background .2s}
+.row:hover{background:#FAFAF8}
+button.row{cursor:pointer}
+.row-name{font-weight:600;line-height:1.3}
+.row-meta{font:400 12.5px/1.4 var(--mono);color:var(--ink-3);margin-top:2px}
+.row-size{font:500 14px/1 var(--mono)}
+.row.done .row-name{text-decoration:line-through;color:var(--ink-3)}
+.tag{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--mist);color:var(--ink-2);white-space:nowrap}
+.tag.good{background:rgba(31,191,117,.14);color:#0F7A47}
+.seg{display:inline-flex;background:var(--mist);border-radius:999px;padding:3px}
+.seg button{height:32px;padding:0 13px;border:0;background:none;border-radius:999px;font:600 13px/1 var(--body);color:var(--ink-2);cursor:pointer;transition:background .2s,color .2s}
+.seg button[aria-pressed="true"][data-v="keep"]{background:#fff;color:var(--ink);box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.seg button[aria-pressed="true"][data-v="delete"]{background:var(--ink);color:#fff}
+.lock-ic{width:22px;display:grid;place-items:center;color:var(--ink-2)}
+.wiggle{animation:wiggle .45s}
+@keyframes wiggle{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+/* ---------- Sections ---------- */
+.section{padding:112px 0;border-top:1px solid var(--line)}
+.h2{font-family:var(--display);font-weight:800;font-size:clamp(42px,5.6vw,76px);letter-spacing:-.032em;line-height:.98;margin:0 0 16px}
+.lede{font-size:19px;color:var(--ink-2);margin:0;max-width:52ch}
+.steps{list-style:none;padding:0;margin:56px 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.step{background:var(--mist);border-radius:28px;padding:28px;min-height:300px;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.3,1.4,.5,1),background .25s}
+.step:hover{transform:translateY(-6px) rotate(-.8deg)}
+.step:nth-child(even):hover{transform:translateY(-6px) rotate(.8deg)}
+.num{font-family:var(--display);font-weight:800;font-size:68px;line-height:1;letter-spacing:-.05em}
+.step h3{font-family:var(--display);font-weight:700;font-size:25px;letter-spacing:-.025em;line-height:1.1;margin:auto 0 10px}
+.step p{margin:0;color:var(--ink-2)}
+.step-final{background:var(--ink);color:#fff}
+.step-final p{color:#B9B9B4}
+.say{display:flex;align-items:center;gap:10px;width:100%;margin-top:16px;padding:14px 16px;border-radius:16px;border:0;background:#262626;color:#fff;font:500 15px/1.35 var(--body);text-align:left;cursor:pointer;transition:background .2s}
+.say:hover{background:#333}
+.say svg{flex:none;margin-left:auto;opacity:.7}
+
+.rules{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:72px;align-items:start}
+.rules .actions{margin-top:30px}
+.notes{list-style:none;padding:0;margin:44px 0 0;display:grid;gap:22px}
+.notes li{display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:start}
+.note-ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--mist)}
+.notes b{display:block;font-size:17px;margin-bottom:2px}
+.notes span{color:var(--ink-2)}
+.file{background:#fff;border-radius:26px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.10),0 0 0 1px rgba(0,0,0,.05);transform:rotate(1deg);transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+.file:hover{transform:rotate(0)}
+.file-bar{display:flex;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.file-bar i{width:12px;height:12px;border-radius:50%;background:#FF5F57}
+.file-bar i:nth-child(2){background:#FEBC2E} .file-bar i:nth-child(3){background:#28C840}
+.file-bar span{margin-left:10px;font:500 13px/1 var(--mono);color:var(--ink-2)}
+.file pre{margin:0;padding:24px 28px;max-height:500px;overflow:auto;font:13.5px/1.7 var(--mono);white-space:pre-wrap;word-break:break-word}
+.file pre b{font-weight:500;color:var(--ink);background:var(--mist);padding:1px 6px;border-radius:5px}
+.file pre .c{color:var(--ink-3)}
+
+.foot{background:#2B2B2B;color:#fff}
+.foot-in{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:92px;flex-wrap:wrap;padding-top:20px;padding-bottom:20px}
+.foot .brand{color:#fff}
+.foot p{margin:0;color:#B9B9B4}
+.foot a{color:#fff}
+
+/* ---------- Floating bits ---------- */
+.tip{position:fixed;z-index:40;pointer-events:none;background:var(--ink);color:#fff;border-radius:14px;padding:11px 14px;font-size:13.5px;line-height:1.35;max-width:250px;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+.tip.show{opacity:1;transform:none}
+.tip b{display:block;font-size:14.5px}
+.tip span{font-family:var(--mono);font-size:12px;color:#B9B9B4}
+.toast{position:fixed;left:50%;bottom:28px;z-index:50;transform:translate(-50%,24px);opacity:0;background:var(--ink);color:#fff;padding:15px 22px;border-radius:999px;font-weight:600;box-shadow:0 14px 40px rgba(0,0,0,.25);transition:opacity .25s,transform .35s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.bit{position:fixed;z-index:45;pointer-events:none;width:12px;height:12px}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1060px){
+  .prompt{display:none}
+  .hero{grid-template-columns:1fr;gap:48px;padding-top:24px}
+  .jar{height:440px}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rules{grid-template-columns:1fr;gap:56px}
+}
+@media (max-width:680px){
+  .wrap{padding:0 16px}
+  .nav-in{height:72px}
+  .nav-links{display:none}
+  .nav-right .btn{height:46px;padding:0 18px;font-size:15px}
+  .icon-btn{width:46px;height:46px}
+  .jar{height:400px;border-radius:26px}
+  .meta{gap:22px}
+  .stats{gap:40px}
+  .btn-big{width:100%}
+  .row{grid-template-columns:auto minmax(0,1fr) auto}
+  .row .seg,.row .tag{grid-column:2 / -1;justify-self:start}
+  .steps{grid-template-columns:1fr}
+  .step{min-height:220px}
+  .section{padding:80px 0}
+  .file{transform:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Mac Cleanup home">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="2" width="26" height="28" rx="8" fill="#F3F3F1"/><rect x="7" y="20" width="18" height="6" rx="2" fill="#0E0E0E"/><rect x="7" y="14" width="18" height="5" rx="2" fill="#FFB516"/><rect x="7" y="9" width="18" height="4" rx="2" fill="#1FBF75"/></svg>
+      Mac Cleanup
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a class="nav-link" href="#try">Try it</a>
+      <a class="nav-link" href="#how">How to use</a>
+      <div class="dd">
+        <button class="nav-link" id="ddBtn" aria-expanded="false" aria-controls="ddMenu">Rules
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="menu" id="ddMenu">
+          <a href="#rules"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Read the rules</a>
+          <a href="CLAUDE.md" download><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Download CLAUDE.md</a>
+          <a class="gh-link" href="#" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>View on GitHub</a>
+        </div>
+      </div>
+    </nav>
+    <button class="prompt" id="promptPill" aria-label="Copy the prompt: Help me free up space on my Mac">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>
+      <span><span id="typed"></span><span class="caret" aria-hidden="true"></span></span>
+      <span class="hint">click to copy</span>
+    </button>
+    <div class="nav-right">
+      <a class="icon-btn gh-link" href="#" target="_blank" rel="noopener" aria-label="View on GitHub">
+        <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <a class="btn btn-primary" href="CLAUDE.md" download>Get the rules</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- Hero: interactive demo -->
+  <section class="wrap hero" id="try">
+    <div class="jar-card">
+      <div class="jar-head">
+        <span class="jar-name">Macintosh HD</span>
+        <span class="jar-free"><b id="freeLabel">5.6 GB</b> free of 245 GB</span>
+      </div>
+      <div class="jar" id="jar" role="img" aria-label="Storage: 5.6 GB free of 245 GB">
+        <div class="stack" id="stack"></div>
+        <div class="sweep" aria-hidden="true"></div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="dot safe"></i>Safe to clear</span>
+        <span><i class="dot check"></i>Check with you</span>
+        <span><i class="dot lock"></i>Never touched</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="eyebrow"><i></i>Demo with numbers from a real cleanup</span>
+      <h1 class="title">Make room.</h1>
+      <div class="meta">
+        <div>
+          <div class="label">Disk</div>
+          <span class="chip"><span class="chip-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 15h.01M11 15h6"/></svg></span>245 GB</span>
+        </div>
+        <div>
+          <div class="label">Assistant</div>
+          <span class="chip"><span class="chip-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg></span>Claude Code</span>
+        </div>
+      </div>
+      <div class="stats">
+        <div><div class="label">Free space</div><div class="big"><span id="freeNum">5.6</span><small>GB</small></div></div>
+        <div><div class="label">Freed</div><div class="big"><span id="freedNum">0</span><small>GB</small></div></div>
+      </div>
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="actions">
+        <button class="btn btn-primary btn-big" id="mainBtn">Scan my Mac</button>
+        <button class="btn btn-ghost btn-big" id="resetBtn" hidden>Start over</button>
+      </div>
+
+      <div class="sorter" id="sorter" hidden>
+        <div class="tabs" role="tablist" aria-label="Groups">
+          <button class="tab" role="tab" data-tab="safe"><i class="dot safe"></i>Safe <span class="count" data-count="safe"></span></button>
+          <button class="tab" role="tab" data-tab="check"><i class="dot check"></i>Check with me <span class="count" data-count="check"></span></button>
+          <button class="tab" role="tab" data-tab="lock"><i class="dot lock"></i>Do not touch <span class="count" data-count="lock"></span></button>
+        </div>
+        <p class="tab-hint" id="tabHint"></p>
+        <ul class="list" id="list" role="tabpanel"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to use -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2 class="h2">Use it on your Mac</h2>
+      <p class="lede">Four steps. About two minutes.</p>
+      <ol class="steps">
+        <li class="step">
+          <span class="num">1</span>
+          <h3>Get Claude Code</h3>
+          <p>Download it from claude.com. You need a paid Claude plan.</p>
+        </li>
+        <li class="step">
+          <span class="num">2</span>
+          <h3>Make a folder</h3>
+          <p>Create a new folder on your Desktop called Mac Cleanup.</p>
+        </li>
+        <li class="step">
+          <span class="num">3</span>
+          <h3>Add the rules</h3>
+          <p>Download CLAUDE.md and put it in that folder. Keep the name exactly as it is.</p>
+        </li>
+        <li class="step step-final">
+          <span class="num">4</span>
+          <h3>Ask Claude</h3>
+          <p>Open the folder in Claude Code and type:</p>
+          <button class="say" data-copy="Help me free up space on my Mac">“Help me free up space on my Mac”
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          </button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Rules -->
+  <section class="section" id="rules">
+    <div class="wrap rules">
+      <div>
+        <h2 class="h2">One file.<br>Your rules.</h2>
+        <p class="lede">Claude reads this file before it does anything. It says what is safe to clear, what to ask about, and what never to touch.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="CLAUDE.md" download>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>
+            Download CLAUDE.md</a>
+          <button class="btn btn-ghost" id="copyRules">Copy text</button>
+        </div>
+        <ul class="notes">
+          <li><span class="note-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span>
+            <div><b>Back up first</b><span>Run a Time Machine backup before any cleanup.</span></div></li>
+          <li><span class="note-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <div><b>You stay in charge</b><span>Claude shows you the list and waits for your yes before deleting.</span></div></li>
+          <li><span class="note-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>
+            <div><b>Make it yours</b><span>Add folders you never want touched at the bottom of the file.</span></div></li>
+        </ul>
+      </div>
+      <div class="file">
+        <div class="file-bar"><i></i><i></i><i></i><span>Mac Cleanup / CLAUDE.md</span></div>
+        <pre id="rulesText">Loading the rules…</pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <a class="brand" href="#top">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="2" width="26" height="28" rx="8" fill="#3A3A3A"/><rect x="7" y="20" width="18" height="6" rx="2" fill="#fff"/><rect x="7" y="14" width="18" height="5" rx="2" fill="#FFB516"/><rect x="7" y="9" width="18" height="4" rx="2" fill="#1FBF75"/></svg>
+      Mac Cleanup
+    </a>
+    <p>Made with Claude Code · <a class="gh-link" href="#" target="_blank" rel="noopener">GitHub</a></p>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// Change this to your repo address if it's different.
+const GITHUB_URL = 'https://github.com/Kunwar1417/mac-cleanup';
+
+const DISK = 245, START_FREE = 5.6;
+// Example data from one real cleanup. Listed bottom-of-jar first.
+const ITEMS = [
+  {id:'macos',     name:'macOS & system',            size:38,  group:'lock',  meta:'Your Mac needs these to start'},
+  {id:'apps',      name:'Apps',                      size:34,  group:'lock',  meta:'Everything you have installed'},
+  {id:'rec',       name:'Hidden screen recordings',  size:18,  group:'check', meta:'2023 – 2024'},
+  {id:'photos',    name:'Photos & videos',           size:41,  group:'lock',  meta:'Your exports and camera roll'},
+  {id:'update',    name:'Leftover update files',     size:30,  group:'safe',  meta:'Old macOS download'},
+  {id:'whatsapp',  name:'WhatsApp media',            size:13,  group:'check', meta:'Photos and videos from chats'},
+  {id:'capcut',    name:'Video projects',            size:18,  group:'lock',  meta:'Work in progress'},
+  {id:'caches',    name:'App caches & logs',         size:9,   group:'safe',  meta:'Rebuild themselves'},
+  {id:'drafts',    name:'Old video drafts',          size:7.8, group:'check', meta:'Not opened in a while'},
+  {id:'docs',      name:'Documents',                 size:7,   group:'lock',  meta:'Your files'},
+  {id:'descript',  name:'Data from a deleted app',   size:6,   group:'check', meta:'App no longer installed'},
+  {id:'vm',        name:'Claude app virtual computer', size:8, group:'safe',  meta:'Re-downloads if needed'},
+  {id:'zips',      name:'Downloaded zip files',      size:2.7, group:'check', meta:'Feb 2025 · Desktop'},
+  {id:'browser',   name:'Browser profiles',          size:4.8, group:'lock',  meta:'Logins and history'},
+  {id:'vlog',      name:'Video editor app data',     size:2.1, group:'check', meta:'Old app cache'},
+];
+const HINTS = {
+  safe:  'Caches, logs and leftovers. They rebuild themselves, so Claude clears them after one yes.',
+  check: 'Anything personal. Claude shows the size and date, then waits for your yes on each one.',
+  lock:  'System files and your work. Claude never deletes these. Try clicking one.'
+};
+const SCAN_PATHS = ['~/Library/Caches','~/Library/Logs','~/Library/ScreenRecordings','~/Library/Containers','~/Library/Application Support','~/Movies','/System (locked)'];
+
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const byId = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+const state = { stage:'idle', tab:'safe', dec:{}, gone:new Set() };
+ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = 'keep'; });
+
+const fmt = v => v < 0.05 ? '0' : v < 10 ? v.toFixed(1) : String(Math.round(v));
+const sizeLabel = n => (n < 10 ? n.toFixed(1) : String(n)) + ' GB';
+const sum = list => list.reduce((a, i) => a + i.size, 0);
+const inGroup = g => ITEMS.filter(i => i.group === g);
+const freeNow = () => START_FREE + sum(ITEMS.filter(i => state.gone.has(i.id)));
+
+/* ---------- Jar ---------- */
+const stack = $('#stack');
+ITEMS.forEach(it => {
+  const b = document.createElement('div');
+  b.className = 'block';
+  b.dataset.id = it.id;
+  b.dataset.group = it.group;
+  b.style.setProperty('--gb', it.size);
+  b.innerHTML = `<span class="block-label"><span>${it.name}</span><span class="mono">${sizeLabel(it.size)}</span></span>`;
+  stack.appendChild(b);
+});
+const freeZone = document.createElement('div');
+freeZone.className = 'free';
+stack.appendChild(freeZone);
+const blockEl = id => stack.querySelector(`.block[data-id="${id}"]`);
+
+/* Tooltip on blocks */
+const tip = $('#tip');
+const GROUP_NAME = { safe:'Safe to clear', check:'Check with you', lock:'Never touched' };
+function showTip(b, x, y) {
+  const it = byId[b.dataset.id];
+  const sorted = b.classList.contains('sorted');
+  tip.innerHTML = sorted
+    ? `<b>${it.name}</b>${sizeLabel(it.size)} · ${GROUP_NAME[it.group]}<br><span>${it.meta}</span>`
+    : `<b>${sizeLabel(it.size)}</b><span>Press Scan to sort this</span>`;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(window.innerWidth - w - 12, x + 16) + 'px';
+  tip.style.top = Math.max(12, y - h - 12) + 'px';
+  tip.classList.add('show');
+}
+stack.addEventListener('mousemove', e => {
+  const b = e.target.closest('.block');
+  if (b && !b.classList.contains('gone')) { showTip(b, e.clientX, e.clientY); highlight(b.dataset.id, true); }
+  else hideTip();
+});
+stack.addEventListener('mouseleave', hideTip);
+stack.addEventListener('click', e => {
+  const b = e.target.closest('.block');
+  if (!b) return;
+  showTip(b, e.clientX, e.clientY);
+  if (b.dataset.group === 'lock' && b.classList.contains('sorted')) lockNudge(b.dataset.id);
+});
+function hideTip() { tip.classList.remove('show'); highlight(null); }
+function highlight(id, on) {
+  stack.querySelectorAll('.block.hl').forEach(b => b.classList.remove('hl'));
+  if (id && on) blockEl(id)?.classList.add('hl');
+}
+
+/* ---------- Numbers ---------- */
+let shown = START_FREE;
+function paint(v) {
+  $('#freeNum').textContent = fmt(v);
+  $('#freedNum').textContent = fmt(v - START_FREE);
+  $('#freeLabel').textContent = fmt(v) + ' GB';
+}
+function tweenTo(target) {
+  const from = shown, t0 = performance.now(), dur = reduce ? 0 : 1400;
+  shown = target;
+  $('#jar').setAttribute('aria-label', `Storage: ${fmt(target)} GB free of ${DISK} GB`);
+  (function step(now) {
+    const p = dur ? Math.min(1, (now - t0) / dur) : 1;
+    paint(from + (target - from) * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+/* ---------- Flow ---------- */
+const mainBtn = $('#mainBtn'), resetBtn = $('#resetBtn'), statusEl = $('#status');
+const setStatus = html => { statusEl.innerHTML = html; };
+
+function startScan() {
+  state.stage = 'scanning';
+  render();
+  const jar = $('#jar');
+  const D = reduce ? 0 : 2600;
+  jar.style.setProperty('--scan', D + 'ms');
+  jar.classList.add('scanning');
+  const jr = jar.getBoundingClientRect();
+  stack.querySelectorAll('.block').forEach(b => {
+    const r = b.getBoundingClientRect();
+    setTimeout(() => b.classList.add('sorted'), ((r.top + r.height / 2 - jr.top) / jr.height) * D);
+  });
+  let i = 0;
+  const tick = D ? setInterval(() => setStatus(`Looking in <code>${SCAN_PATHS[i++ % SCAN_PATHS.length]}</code>`), D / SCAN_PATHS.length) : null;
+  setStatus(`Looking in <code>${SCAN_PATHS[0]}</code>`);
+  setTimeout(() => {
+    clearInterval(tick);
+    jar.classList.remove('scanning');
+    state.stage = 'sorted';
+    state.tab = 'safe';
+    render();
+  }, D + 250);
+}
+
+function removeItems(ids) {
+  ids.forEach((id, k) => {
+    const b = blockEl(id);
+    b.classList.remove('marked');
+    b.style.transitionDelay = reduce ? '0ms' : `${k * 160}ms`;
+    b.classList.add('gone');
+    state.gone.add(id);
+  });
+  tweenTo(freeNow());
+}
+
+function clearSafe() {
+  removeItems(inGroup('safe').map(i => i.id));
+  state.stage = 'safeCleared';
+  state.tab = 'check';
+  render();
+}
+
+function finishCheck(btn) {
+  const ids = inGroup('check').filter(i => state.dec[i.id] === 'delete').map(i => i.id);
+  removeItems(ids);
+  state.stage = 'done';
+  render();
+  if (!reduce) setTimeout(() => burst(btn), 300);
+}
+
+function reset() {
+  state.stage = 'idle'; state.tab = 'safe'; state.gone.clear();
+  ITEMS.forEach(i => { if (i.group === 'check') state.dec[i.id] = 'keep'; });
+  stack.querySelectorAll('.block').forEach(b => { b.style.transitionDelay = '0ms'; b.className = 'block'; });
+  tweenTo(START_FREE);
+  render();
+}
+
+mainBtn.addEventListener('click', () => {
+  ({ idle: startScan, sorted: clearSafe, safeCleared: () => finishCheck(mainBtn),
+     done: () => $('#rules').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }) })[state.stage]?.();
+});
+resetBtn.addEventListener('click', reset);
+
+/* ---------- Render ---------- */
+function selectedCheck() { return inGroup('check').filter(i => state.dec[i.id] === 'delete' && !state.gone.has(i.id)); }
+
+function render() {
+  const s = state.stage;
+  mainBtn.disabled = s === 'scanning';
+  resetBtn.hidden = s !== 'done';
+  $('#sorter').hidden = !['sorted', 'safeCleared', 'done'].includes(s);
+
+  if (s === 'idle') { mainBtn.textContent = 'Scan my Mac'; setStatus('Press Scan to see what is taking up space. This is a demo, so nothing is deleted.'); }
+  if (s === 'scanning') mainBtn.textContent = 'Scanning…';
+  if (s === 'sorted') {
+    mainBtn.textContent = `Clear safe items · ${fmt(sum(inGroup('safe')))} GB`;
+    setStatus(`Found <b>${fmt(sum(inGroup('safe')))} GB</b> of safe junk and <b>${fmt(sum(inGroup('check')))} GB</b> to check with you.`);
+  }
+  if (s === 'safeCleared') {
+    const sel = selectedCheck();
+    mainBtn.textContent = sel.length ? `Delete ${sel.length} item${sel.length > 1 ? 's' : ''} · ${fmt(sum(sel))} GB` : 'Keep all and finish';
+    setStatus('Safe items cleared. Now pick what else can go. Each one needs your yes.');
+  }
+  if (s === 'done') {
+    mainBtn.textContent = 'Get the rules';
+    setStatus(`Done. <b>${fmt(freeNow() - START_FREE)} GB</b> freed, and nothing you care about was touched.`);
+  }
+
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.tab === state.tab;
+    t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll('[data-count]').forEach(c => { c.textContent = inGroup(c.dataset.count).length; });
+  $('#tabHint').textContent = HINTS[state.tab];
+
+  inGroup('check').forEach(i => blockEl(i.id).classList.toggle('marked', state.dec[i.id] === 'delete' && !state.gone.has(i.id)));
+  renderList();
+}
+
+const LOCK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+function renderList() {
+  const list = $('#list');
+  const g = state.tab;
+  list.innerHTML = inGroup(g).map(it => {
+    const gone = state.gone.has(it.id);
+    const main = `<span><div class="row-name">${it.name}</div><div class="row-meta">${it.meta}</div></span><span class="row-size">${sizeLabel(it.size)}</span>`;
+    if (g === 'lock')
+      return `<li><button class="row" data-id="${it.id}"><span class="lock-ic">${LOCK_SVG}</span>${main}<span class="tag">Locked</span></button></li>`;
+    let end;
+    if (g === 'safe') end = gone ? '<span class="tag good">Cleared</span>' : '<span class="tag">Ready</span>';
+    else if (gone) end = '<span class="tag good">Deleted</span>';
+    else if (state.stage === 'done') end = '<span class="tag">Kept</span>';
+    else end = `<span class="seg" role="group" aria-label="${it.name}">
+        <button data-v="keep" aria-pressed="${state.dec[it.id] === 'keep'}">Keep</button>
+        <button data-v="delete" aria-pressed="${state.dec[it.id] === 'delete'}">Delete</button></span>`;
+    return `<li class="row${gone ? ' done' : ''}" data-id="${it.id}"><i class="dot ${g}"></i>${main}${end}</li>`;
+  }).join('');
+}
+
+const list = $('#list');
+list.addEventListener('click', e => {
+  const seg = e.target.closest('.seg button');
+  if (seg) {
+    const id = seg.closest('.row').dataset.id;
+    state.dec[id] = seg.dataset.v;
+    render();
+    return;
+  }
+  const lockRow = e.target.closest('button.row');
+  if (lockRow) lockNudge(lockRow.dataset.id, lockRow);
+});
+list.addEventListener('mouseover', e => { const r = e.target.closest('.row'); if (r) highlight(r.dataset.id, true); });
+list.addEventListener('mouseleave', () => highlight(null));
+list.addEventListener('focusin', e => { const r = e.target.closest('.row'); if (r) highlight(r.dataset.id, true); });
+
+function lockNudge(id, row) {
+  const b = blockEl(id);
+  [b, row].forEach(el => { if (!el) return; el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle'); });
+  toast(`Locked. Claude won’t touch ${byId[id].name.toLowerCase()}.`);
+}
+
+/* Tabs (click + arrow keys) */
+const tabs = [...document.querySelectorAll('.tab')];
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => { state.tab = t.dataset.tab; render(); });
+  t.addEventListener('keydown', e => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return;
+    const n = tabs[(i + d + tabs.length) % tabs.length];
+    state.tab = n.dataset.tab; render(); n.focus();
+  });
+});
+
+/* ---------- Little extras ---------- */
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function burst(from) {
+  const r = from.getBoundingClientRect();
+  const colors = ['#1FBF75', '#FFB516', '#0E0E0E', '#3D5AFE'];
+  for (let i = 0; i < 30; i++) {
+    const el = document.createElement('div');
+    el.className = 'bit';
+    const shape = i % 3;
+    el.style.background = colors[i % colors.length];
+    if (shape === 1) el.style.borderRadius = '50%';
+    if (shape === 2) el.style.clipPath = 'polygon(50% 0,100% 100%,0 100%)';
+    el.style.left = r.left + r.width / 2 + 'px';
+    el.style.top = r.top + r.height / 2 + 'px';
+    document.body.appendChild(el);
+    const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 160;
+    el.animate([
+      { transform: 'translate(-50%,-50%) rotate(0)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d + 60}px)) rotate(${Math.random() * 540}deg)`, opacity: 0 }
+    ], { duration: 900 + Math.random() * 500, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => el.remove();
+  }
+}
+
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch { toast('Copy did not work. Select the text and copy it yourself.'); }
+}
+
+/* Nav prompt types itself, click copies */
+const PROMPT = 'Help me free up space on my Mac';
+(function type(i = 0) {
+  $('#typed').textContent = PROMPT.slice(0, i);
+  if (i < PROMPT.length) setTimeout(() => type(i + 1), reduce ? 0 : 45 + Math.random() * 50);
+})(reduce ? PROMPT.length : 0);
+$('#promptPill').addEventListener('click', () => copy(PROMPT, 'Prompt copied. Paste it into Claude Code.'));
+document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.dataset.copy, 'Prompt copied. Paste it into Claude Code.')));
+
+/* Dropdown */
+const ddBtn = $('#ddBtn'), ddMenu = $('#ddMenu');
+const setDD = open => { ddBtn.setAttribute('aria-expanded', open); ddMenu.classList.toggle('open', open); };
+ddBtn.addEventListener('click', e => { e.stopPropagation(); setDD(ddBtn.getAttribute('aria-expanded') !== 'true'); });
+document.addEventListener('click', e => { if (!ddMenu.contains(e.target)) setDD(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { setDD(false); hideTip(); } });
+ddMenu.addEventListener('click', () => setDD(false));
+
+/* GitHub links */
+document.querySelectorAll('.gh-link').forEach(a => a.href = GITHUB_URL);
+
+/* Rules file preview */
+let rulesText = '';
+fetch('CLAUDE.md').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => {
+  rulesText = t;
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  $('#rulesText').innerHTML = t.split('\n').map(line =>
+    line.startsWith('#') ? `<b>${esc(line)}</b>` : line.startsWith('<!--') ? `<span class="c">${esc(line)}</span>` : esc(line)
+  ).join('\n');
+}).catch(() => { $('#rulesText').textContent = 'Open CLAUDE.md from this folder to read the rules.'; });
+$('#copyRules').addEventListener('click', () => rulesText ? copy(rulesText, 'Rules copied.') : toast('Download the file instead.'));
+
+render();
+</script>
+</body>
+</html>
