@@ -151,12 +151,12 @@ button.row{cursor:pointer}
 
 .step .small{margin-top:12px;font-size:14px}
 
-.notice{display:flex;align-items:center;gap:14px;margin:8px 0 0;padding:14px 18px;border-radius:18px;background:var(--check-soft,#FFF5DA);color:#5A4300}
+.notice{display:flex;align-items:center;gap:14px;margin:8px 0 0;padding:14px 20px;border-radius:18px;background:var(--mist);color:var(--ink-2)}
 .notice p{margin:0;flex:1}
-.notice b{color:#3D2D00}
-.notice a{font-weight:600;white-space:nowrap;text-decoration:none;color:#3D2D00}
+.notice b{color:var(--ink)}
+.notice a{font-weight:600;white-space:nowrap;text-decoration:none;color:var(--ink)}
 .notice a:hover{text-decoration:underline}
-.notice-ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--check);color:var(--ink);font:700 14px/1 var(--display)}
+.notice-ic{flex:none;width:8px;height:8px;margin:0 4px;border-radius:50%;background:var(--safe);box-shadow:0 0 0 4px rgba(31,191,117,.18)}
 
 .features{list-style:none;padding:0;margin:56px 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .feature{padding:26px;border-radius:26px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--line);transition:transform .3s cubic-bezier(.3,1.4,.5,1),box-shadow .25s}
@@ -227,9 +227,10 @@ button.row{cursor:pointer}
   .row{grid-template-columns:auto minmax(0,1fr) auto}
   .row .seg,.row .tag{grid-column:2 / -1;justify-self:start}
   .steps,.features{grid-template-columns:1fr}
-  .notice{flex-wrap:wrap;align-items:flex-start;gap:8px 12px}
+  .notice{flex-wrap:wrap;align-items:baseline;gap:8px 12px}
+  .notice-ic{transform:translateY(-2px)}
   .notice p{flex:1 1 calc(100% - 40px)}
-  .notice a{padding-left:38px}
+  .notice a{padding-left:28px}
   .get{padding:24px 20px}
   .get .actions,.get .btn{width:100%}
   .step{min-height:220px}
@@ -280,9 +281,9 @@ button.row{cursor:pointer}
 <main id="top">
   <div class="wrap">
     <div class="notice" role="note">
-      <span class="notice-ic" aria-hidden="true">i</span>
-      <p><b>This page is a demo.</b> It can’t see or change your Mac. It replays one real cleanup so you can see how the tool works.</p>
-      <a href="#how">Use it on your Mac →</a>
+      <span class="notice-ic" aria-hidden="true"></span>
+      <p><b>Interactive demo, based on a real cleanup.</b> Results on your Mac will be different.</p>
+      <a href="#how">Try it on yours →</a>
     </div>
   </div>
 
